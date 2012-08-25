@@ -22,5 +22,8 @@ CarrierWave.configure do |config|
   config.grandcloud_access_key = 'xxxxxx'
   # you need create this bucket first!
   config.grandcloud_bucket = "simple"
+
+  # add this line if your bucket is private
+  config.grandcloud_bucket_private = true
 end
 ```

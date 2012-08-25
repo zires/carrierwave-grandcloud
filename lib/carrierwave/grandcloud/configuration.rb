@@ -6,6 +6,7 @@ module CarrierWave
         add_config :grandcloud_access_id
         add_config :grandcloud_access_key
         add_config :grandcloud_bucket
+        add_config :grandcloud_bucket_private
         add_config :grandcloud_location
       end
     end

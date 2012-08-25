@@ -52,11 +52,15 @@ module CarrierWave
         end
 
         def url(expires_at = Time.now + 3000)
-          object = bucket.objects.find(@path)
-          if bucket.policy == "Allow"
-            object.url
+          unless @uploader.grandcloud_bucket_private
+            "http://#{Sndacs::REGION_CONTENT_HOST % @uploader.grandcloud_location}/#{@uploader.grandcloud_bucket}/#{path}"
           else
-            object.temporary_url(expires_at)
+            object = bucket.objects.find(@path)
+            if bucket.policy == "Allow"
+              object.url
+            else
+              object.temporary_url(expires_at)
+            end
           end
         end
 
