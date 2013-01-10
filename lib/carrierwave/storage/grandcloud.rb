@@ -8,10 +8,9 @@ module CarrierWave
   module Storage
     class Grandcloud < Abstract
       class File
+
         def initialize(uploader, base, path)
-          @uploader = uploader
-          @path = path
-          @base = base
+          @uploader, @base, @path = uploader, base, path
         end
 
         ##
@@ -21,9 +20,9 @@ module CarrierWave
         #
         # [String] A path
         #
-        def path
-          @path
-        end
+        attr_reader :path
+
+        attr_accessor :content_type
 
         ##
         # Reads the contents of the file from Cloud Files
@@ -33,7 +32,6 @@ module CarrierWave
         # [String] contents of the file
         #
         def read
-          object = bucket.objects.find(@path)
           object.content
         end
 
@@ -41,26 +39,14 @@ module CarrierWave
         # Remove the file from Cloud Files
         #
         def delete
-          begin
-            object = bucket.objects.find(@path)
-            object.destroy
-            true
-          rescue Exception => e
-            # If the file's not there, don't panic
-            nil
-          end
+          object.destroy rescue nil
         end
 
         def url(expires_at = Time.now + 3000)
           unless @uploader.grandcloud_bucket_private
             "http://#{Sndacs::Config.content_host % @uploader.grandcloud_location}/#{@uploader.grandcloud_bucket}/#{path}"
           else
-            object = bucket.objects.find(@path)
-            if bucket.policy == "Allow"
-              object.url
-            else
-              object.temporary_url(expires_at)
-            end
+            bucket.policy == 'Allow' ? object.url : object.temporary_url(expires_at)
           end
         end
 
@@ -69,25 +55,42 @@ module CarrierWave
           new_object.content = data
           new_object.save
         end
+        
+        ##
+        # Lookup value for file content-type header
+        #
+        # === Returns
+        #
+        # [String] value of content-type
+        #
+        def content_type
+          @content_type || object.content_type
+        end
 
         private
 
-          def headers
-            @headers ||= {  }
-          end
+        def headers
+          @headers ||= {}
+        end
 
-          def bucket
-            return @bucket if @bucket
-            service = Sndacs::Service.new(:access_key_id => @uploader.grandcloud_access_id,
-                              :secret_access_key => @uploader.grandcloud_access_key)
-            @bucket = service.bucket(@uploader.grandcloud_bucket, @uploader.grandcloud_location)
-            @bucket
+        def bucket
+          @bucket ||= begin
+            Sndacs::Service.new(
+              :access_key_id     => @uploader.grandcloud_access_id,
+              :secret_access_key => @uploader.grandcloud_access_key
+            ).bucket(@uploader.grandcloud_bucket, @uploader.grandcloud_location)
           end
+        end
 
-      end
+        def object
+          @object ||= bucket.objects.find(@path)
+        end
+
+      end #// End of File
 
       def store!(file)
         f = CarrierWave::Storage::Grandcloud::File.new(uploader, self, uploader.store_path)
+        f.content_type= file.to_file.content_type
         f.store(file.read)
         f
       end
@@ -95,6 +98,7 @@ module CarrierWave
       def retrieve!(identifier)
         CarrierWave::Storage::Grandcloud::File.new(uploader, self, uploader.store_path(identifier))
       end
+
     end
   end
 end
