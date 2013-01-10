@@ -51,9 +51,9 @@ module CarrierWave
         end
 
         def store(data)
-          new_object = bucket.objects.build(@path)
-          new_object.content = data
-          new_object.save
+          @object = bucket.objects.build(@path)
+          @object.content = data
+          @object.save
         end
         
         ##
@@ -90,7 +90,6 @@ module CarrierWave
 
       def store!(file)
         f = CarrierWave::Storage::Grandcloud::File.new(uploader, self, uploader.store_path)
-        f.content_type= file.to_file.content_type
         f.store(file.read)
         f
       end
